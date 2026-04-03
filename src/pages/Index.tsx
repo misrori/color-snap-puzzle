@@ -1,16 +1,50 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useGameState } from "@/hooks/useGameState";
+import { GameMenu } from "@/components/game/GameMenu";
+import { GameBoard } from "@/components/game/GameBoard";
+import { GameHeader } from "@/components/game/GameHeader";
+import { GameWin } from "@/components/game/GameWin";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+const Index = () => {
+  const game = useGameState();
+
+  if (game.gameState === "menu") {
+    return <GameMenu onStart={game.startGame} />;
+  }
+
+  if (game.gameState === "won") {
+    return (
+      <GameWin
+        level={game.level}
+        moves={game.moves}
+        score={game.score}
+        onNext={game.nextLevel}
+        onRestart={game.restartLevel}
+      />
+    );
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
+    <div className="flex flex-col items-center min-h-screen px-4 pt-2 pb-6">
+      <GameHeader
+        level={game.level}
+        moves={game.moves}
+        score={game.score}
+        onRestart={game.restartLevel}
+        onMenu={() => game.setGameState("menu")}
+      />
+      <div className="flex-1 flex items-center w-full">
+        <GameBoard
+          blocks={game.blocks}
+          gridSize={game.gridSize}
+          onMove={game.moveBlock}
+          showCelebration={game.showCelebration}
+        />
+      </div>
+      <p className="text-xs text-muted-foreground mt-4">
+        Húzd a blokkokat a szaggatott célhelyekre! ✨
+      </p>
     </div>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;
