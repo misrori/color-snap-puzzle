@@ -47,7 +47,7 @@ jobs:
 
       - name: Sign App
         id: sign_app
-        uses: r0adkall/sign-android-release@v1
+        uses: r0adkll/sign-android-release@v1
         with:
           releaseDirectory: android/app/build/outputs/bundle/release
           signingKeyBase64: ${{ secrets.ANDROID_KEYSTORE }}
@@ -57,7 +57,7 @@ jobs:
 
       - name: Sign APK
         id: sign_apk
-        uses: r0adkall/sign-android-release@v1
+        uses: r0adkll/sign-android-release@v1
         with:
           releaseDirectory: android/app/build/outputs/apk/release
           signingKeyBase64: ${{ secrets.ANDROID_KEYSTORE }}
