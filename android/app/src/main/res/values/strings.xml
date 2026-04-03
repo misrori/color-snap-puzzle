@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Tetra Puzzle</string>
+    <string name="title_activity_main">Tetra Puzzle</string>
+    <string name="package_name">com.misrori.colorsnappuzzle</string>
+    <string name="custom_url_scheme">com.misrori.colorsnappuzzle</string>
+</resources>

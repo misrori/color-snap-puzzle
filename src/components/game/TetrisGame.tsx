@@ -61,6 +61,22 @@ function NextPiece({ shape, type }: { shape: number[][]; type: PieceType }) {
 const TetrisGame: React.FC = () => {
   const game = useTetris();
   const touchStart = useRef<{ x: number; y: number; time: number } | null>(null);
+  const longPressTimer = useRef<number | null>(null);
+
+  // Soft drop (acceleration) while holding
+  const startSoftDrop = useCallback(() => {
+    if (longPressTimer.current) return;
+    longPressTimer.current = window.setInterval(() => {
+      game.moveDown();
+    }, 50) as unknown as number; // Fast acceleration
+  }, [game.moveDown]);
+
+  const stopSoftDrop = useCallback(() => {
+    if (longPressTimer.current) {
+      clearInterval(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
 
   // Keyboard controls
   useEffect(() => {
@@ -79,13 +95,25 @@ const TetrisGame: React.FC = () => {
     return () => window.removeEventListener("keydown", handler);
   }, [game.gameState, game.moveLeft, game.moveRight, game.moveDown, game.rotate, game.hardDrop, game.togglePause]);
 
-  // Touch swipe on game area
+  // Touch handlers
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     const t = e.touches[0];
     touchStart.current = { x: t.clientX, y: t.clientY, time: Date.now() };
-  }, []);
+    
+    // Start long press timer for acceleration
+    longPressTimer.current = window.setTimeout(() => {
+      startSoftDrop();
+    }, 250) as unknown as number; // Long press after 250ms
+  }, [startSoftDrop]);
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    // Clear long press timer
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    stopSoftDrop();
+
     if (!touchStart.current) return;
     const t = e.changedTouches[0];
     const dx = t.clientX - touchStart.current.x;
@@ -96,21 +124,26 @@ const TetrisGame: React.FC = () => {
     const absDx = Math.abs(dx);
     const absDy = Math.abs(dy);
 
-    // Tap (no significant movement)
-    if (absDx < 15 && absDy < 15 && dt < 300) {
+    // Tap (rotate)
+    if (absDx < 15 && absDy < 15 && dt < 200) {
       game.rotate();
       return;
     }
 
-    // Swipe
-    if (absDy > absDx && dy > 40) {
-      // Swipe down - hard drop
-      game.hardDrop();
-    } else if (absDx > absDy) {
+    // Swipes
+    if (absDy > absDx) {
+      if (dy > 35) {
+        // Swipe down - hard drop
+        game.hardDrop();
+      } else if (dy < -35) {
+        // Swipe up - rotate
+        game.rotate();
+      }
+    } else {
       if (dx > 25) game.moveRight();
       else if (dx < -25) game.moveLeft();
     }
-  }, [game.rotate, game.hardDrop, game.moveRight, game.moveLeft]);
+  }, [game.rotate, game.hardDrop, game.moveRight, game.moveLeft, stopSoftDrop]);
 
   // MENU
   if (game.gameState === "menu") {
@@ -124,20 +157,20 @@ const TetrisGame: React.FC = () => {
             ))}
           </div>
           <h1 className="text-4xl font-black text-foreground tracking-tight mt-2">
-            Tetrisz
+            Tetra Puzzle
           </h1>
           <p className="text-muted-foreground text-center text-base max-w-[260px]">
-            Rakd össze a sorokat a zuhanó blokkokkal! 🎮
+            Clear lines with falling blocks! 🎮
           </p>
         </div>
         <button onClick={game.startGame}
           className="flex items-center gap-3 bg-primary text-primary-foreground px-8 py-4 rounded-2xl font-extrabold text-lg game-block-shadow active:scale-95 transition-transform">
-          <Play size={24} /> Játék indítása
+          <Play size={24} /> Start Game
         </button>
         <div className="text-xs text-muted-foreground text-center max-w-[260px] space-y-1">
-          <p>📱 Érintsd meg = forgatás</p>
-          <p>👆 Húzd oldalra = mozgatás</p>
-          <p>👇 Húzd lefelé = ledobás</p>
+          <p>📱 Tap = rotate</p>
+          <p>👆 Swipe side = move</p>
+          <p>👇 Swipe down = drop</p>
         </div>
       </div>
     );
@@ -148,29 +181,29 @@ const TetrisGame: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen px-6 gap-6">
         <span className="text-6xl animate-pop-in">💥</span>
-        <h2 className="text-3xl font-black text-foreground">Játék vége!</h2>
+        <h2 className="text-3xl font-black text-foreground">Game Over!</h2>
         <div className="bg-game-surface rounded-2xl p-6 game-block-shadow flex flex-col items-center gap-3 w-full max-w-[280px]">
           <div className="flex justify-between w-full">
-            <span className="text-muted-foreground">Pontszám</span>
+            <span className="text-muted-foreground">Score</span>
             <span className="font-bold text-primary text-xl">{game.score}</span>
           </div>
           <div className="flex justify-between w-full">
-            <span className="text-muted-foreground">Sorok</span>
+            <span className="text-muted-foreground">Lines</span>
             <span className="font-bold">{game.lines}</span>
           </div>
           <div className="flex justify-between w-full">
-            <span className="text-muted-foreground">Szint</span>
+            <span className="text-muted-foreground">Level</span>
             <span className="font-bold">{game.level}</span>
           </div>
         </div>
         <div className="flex gap-3">
           <button onClick={() => game.setGameState("menu")}
             className="flex items-center gap-2 bg-secondary text-foreground px-5 py-3 rounded-xl font-bold active:scale-95 transition-transform">
-            <Home size={18} /> Menü
+            <Home size={18} /> Menu
           </button>
           <button onClick={game.startGame}
             className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-xl font-bold game-block-shadow active:scale-95 transition-transform">
-            <RefreshCw size={18} /> Újra
+            <RefreshCw size={18} /> Restart
           </button>
         </div>
       </div>
@@ -190,15 +223,15 @@ const TetrisGame: React.FC = () => {
         </button>
         <div className="flex items-center gap-4 text-sm font-bold">
           <div className="flex flex-col items-center">
-            <span className="text-[10px] text-muted-foreground uppercase">Pont</span>
+            <span className="text-[10px] text-muted-foreground uppercase">Score</span>
             <span className="text-primary text-base">{game.score}</span>
           </div>
           <div className="flex flex-col items-center">
-            <span className="text-[10px] text-muted-foreground uppercase">Sorok</span>
+            <span className="text-[10px] text-muted-foreground uppercase">Lines</span>
             <span className="text-foreground text-base">{game.lines}</span>
           </div>
           <div className="flex flex-col items-center">
-            <span className="text-[10px] text-muted-foreground uppercase">Szint</span>
+            <span className="text-[10px] text-muted-foreground uppercase">Level</span>
             <span className="text-foreground text-base">{game.level}</span>
           </div>
         </div>
@@ -235,43 +268,43 @@ const TetrisGame: React.FC = () => {
           {game.gameState === "paused" && (
             <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-xl">
               <div className="text-center">
-                <p className="text-2xl font-black text-foreground">⏸️ Szünet</p>
-                <p className="text-sm text-muted-foreground mt-1">Érintsd a ▶ gombot</p>
+                <p className="text-2xl font-black text-foreground">⏸️ Paused</p>
+                <p className="text-sm text-muted-foreground mt-1">Tap ▶ to resume</p>
               </div>
             </div>
           )}
         </div>
 
         {/* Side panel - next piece */}
-        <div className="flex flex-col items-center gap-2">
-          <span className="text-[10px] text-muted-foreground uppercase font-bold">Köv.</span>
-          <div className="bg-game-surface rounded-xl p-2 game-block-shadow">
+        <div className="flex flex-col items-center gap-2 pt-2">
+          <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Next</span>
+          <div className="bg-game-surface/50 backdrop-blur-md rounded-2xl p-3 border border-white/5 shadow-2xl">
             <NextPiece shape={game.nextShape} type={game.next} />
           </div>
         </div>
       </div>
 
-      {/* Touch controls */}
-      <div className="flex items-center justify-center gap-3 py-3 px-4 w-full max-w-md">
+      {/* Touch controls - Improved for Mobile */}
+      <div className="grid grid-cols-5 gap-2 pb-8 pt-4 px-4 w-full max-w-md">
         <button onTouchStart={(e) => { e.preventDefault(); game.moveLeft(); }} onMouseDown={game.moveLeft}
-          className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center text-foreground active:scale-90 active:bg-accent transition-all game-block-shadow">
-          <ChevronLeft size={28} />
+          className="aspect-square rounded-2xl bg-secondary/80 backdrop-blur-sm flex items-center justify-center text-foreground active:scale-90 active:bg-primary/20 transition-all shadow-lg border border-white/5">
+          <ChevronLeft size={32} />
         </button>
         <button onTouchStart={(e) => { e.preventDefault(); game.moveDown(); }} onMouseDown={game.moveDown}
-          className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center text-foreground active:scale-90 active:bg-accent transition-all game-block-shadow">
-          <ChevronDown size={28} />
+          className="aspect-square rounded-2xl bg-secondary/80 backdrop-blur-sm flex items-center justify-center text-foreground active:scale-90 active:bg-primary/20 transition-all shadow-lg border border-white/5">
+          <ChevronDown size={32} />
         </button>
         <button onTouchStart={(e) => { e.preventDefault(); game.hardDrop(); }} onMouseDown={game.hardDrop}
-          className="w-14 h-14 rounded-2xl bg-primary/20 flex items-center justify-center text-primary active:scale-90 active:bg-primary/30 transition-all game-block-shadow">
-          <ChevronsDown size={28} />
+          className="aspect-square rounded-2xl bg-primary/30 backdrop-blur-sm flex items-center justify-center text-primary active:scale-90 active:bg-primary/40 transition-all shadow-xl border border-primary/20">
+          <ChevronsDown size={32} />
         </button>
         <button onTouchStart={(e) => { e.preventDefault(); game.moveRight(); }} onMouseDown={game.moveRight}
-          className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center text-foreground active:scale-90 active:bg-accent transition-all game-block-shadow">
-          <ChevronRight size={28} />
+          className="aspect-square rounded-2xl bg-secondary/80 backdrop-blur-sm flex items-center justify-center text-foreground active:scale-90 active:bg-primary/20 transition-all shadow-lg border border-white/5">
+          <ChevronRight size={32} />
         </button>
         <button onTouchStart={(e) => { e.preventDefault(); game.rotate(); }} onMouseDown={game.rotate}
-          className="w-14 h-14 rounded-2xl bg-accent flex items-center justify-center text-primary active:scale-90 active:bg-primary/20 transition-all game-block-shadow">
-          <RotateCw size={28} />
+          className="aspect-square rounded-2xl bg-accent/80 backdrop-blur-sm flex items-center justify-center text-primary active:scale-90 active:bg-primary/20 transition-all shadow-lg border border-primary/10">
+          <RotateCw size={32} />
         </button>
       </div>
     </div>
