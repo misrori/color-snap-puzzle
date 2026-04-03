@@ -25,6 +25,17 @@ jobs:
 
       - name: Build web app
         run: npm run build
+        env:
+          VITE_BASE: /
+
+      - name: Generate Android Assets
+        run: |
+          mkdir -p assets
+          cp public/logo.png assets/icon-only.png
+          cp public/logo.png assets/splash-only.png
+          npx @capacitor/assets generate --android --icon-only assets/icon-only.png --splash-only assets/splash-only.png || true
+          # Fallback to simple generate if specific flags fail
+          npx @capacitor/assets generate --android || true
 
       - name: Capacitor Sync
         run: npx cap sync android
