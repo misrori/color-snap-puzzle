@@ -13,7 +13,22 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        game: ['Nunito', 'sans-serif'],
+      },
       colors: {
+        game: {
+          red: "hsl(var(--game-red))",
+          blue: "hsl(var(--game-blue))",
+          green: "hsl(var(--game-green))",
+          yellow: "hsl(var(--game-yellow))",
+          purple: "hsl(var(--game-purple))",
+          orange: "hsl(var(--game-orange))",
+          pink: "hsl(var(--game-pink))",
+          cyan: "hsl(var(--game-cyan))",
+          surface: "hsl(var(--game-surface))",
+          grid: "hsl(var(--game-grid))",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
